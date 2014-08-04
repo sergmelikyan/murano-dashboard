@@ -73,20 +73,23 @@ class BillingStats(object):
                 for _node in node:
                     _rec(_node)
 
-        for item in service:
-            _rec(item)
+        for attr in dir(service):
+            if not attr.startswith('__') or not attr.startswith('_'):
+                _rec(getattr(service, attr))
         return ids
 
     def build_service_list(self, request, env):
-        serv_list = api.services_list(request, env.id)
+        serv_list = api.muranoclient(request).services.list(env.id)
         LOG.debug('Got Service List: {0}'.format(serv_list))
-        id_list = {}
+        ids = {}
         for service in serv_list:
-            ids = self._get_instances_ids(service)
-            storage = service['?'][consts.DASHBOARD_ATTRS_KEY]
-            info = {'name': storage['name'], 'type': service['?']['type']}
-            id_list.update(dict((_id, info) for _id in ids))
-        return id_list
+            id_list = self._get_instances_ids(service)
+            service_meta_info = getattr(service, '?')
+            storage = service_meta_info[consts.DASHBOARD_ATTRS_KEY]
+            info = {'name': storage['name'],
+                    'type': service_meta_info['type']}
+            ids.update(dict((_id, info) for _id in id_list))
+        return ids
 
 
 class Stats(object):
